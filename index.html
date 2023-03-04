@@ -43,7 +43,7 @@
         let imgArray = [];
         let urlBase64List = [];
 
-        const urlBase64ListProxiedArray = new Proxy(urlBase64List, {
+        /*const urlBase64ListProxiedArray = new Proxy(urlBase64List, {
             get(target, prop) {
                 if (prop === 'last') {
                     return target[target.length - 1];
@@ -58,7 +58,7 @@
                 target[prop] = value;
                 return true;
             }
-        });
+        });*/
 
         colors.forEach(color => {
             $('.select-bg').append(`<button data-color="${color}" style="background: ${color};"></button>`)
@@ -92,7 +92,7 @@
                         if (len > maxLength) {
                             return false;
                         } else {
-                            imgArray.push(f);
+                            // imgArray.push(f);
 
                             var reader = new FileReader();
 
@@ -100,7 +100,8 @@
                                 const base64Url = e.target.result;
                                 const index = $(".upload__img-close").length;
                                 const name = f.name;
-                                urlBase64ListProxiedArray.push({
+                                imgArray.push({
+                                    file: f,
                                     name,
                                     index,
                                     url: base64Url,
@@ -127,7 +128,7 @@
             var file = $(this).parent().data("file");
             for (var i = 0; i < imgArray.length; i++) {
                 if (imgArray[i].name === file) {
-                    urlBase64ListProxiedArray.splice(i, 1);
+                    imgArray.splice(i, 1);
                     break;
                 }
             }
@@ -135,7 +136,7 @@
         });
 
         $body.on('click', "#btn-saveToZip", function (e) {
-            injectBgToCanvas(urlBase64ListProxiedArray, selectedColor)
+            injectBgToCanvas(imgArray, selectedColor)
 
         })
         $body.on('click', ".select-bg button", function (e) {
@@ -168,7 +169,6 @@
 
                     // Vẽ hình ảnh cũ lên canvas mới
                     newCtx.drawImage(canvas, 0, 0);
-                    console.log(newCtx)
                     callback && callback(newCanvas);
                     resolve(newCanvas)
                 };
