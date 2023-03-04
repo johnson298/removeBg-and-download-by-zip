@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://code.jquery.com/jquery-3.6.3.slim.js" integrity="sha256-DKU1CmJ8kBuEwumaLuh9Tl/6ZB6jzGOBV/5YpNE2BWc=" crossorigin="anonymous"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js" integrity="sha512-csNcFYJniKjJxRWRV1R7fvnXrycHP6qDR21mgz1ZP55xY5d+aHLfo9/FcGDQLfn2IfngbAHd8LdfsagcCqgTcQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="variable.js"></script>
+</head>
+<body>
+<div id="s-drop-img">
+    <div class="select-bg">
+        <button class="active" data-color="" style="background: url('./transparent.png')"></button>
+    </div>
+    <button id="btn-saveToZip">Lưu tất cả zip</button>
+    <div class="upload__img-wrap"></div>
+    <div class="upload__box">
+        <div class="upload__btn-box">
+            <label class="upload__btn">
+                <p>+</p>
+                <div class="inline-text-drop">Chọn (các) ảnh</div>
+                <input type="file" multiple="" data-max_length="20" class="upload__inputfile">
+            </label>
+        </div>
+    </div>
+</div>
+</body>
+<script>
+    jQuery(document).ready(function () {
+        ImgUpload();
+    });
+    function ImgUpload() {
+        const $body = $('body')
+        let selectedColor = ''
+        let colors = ['red', 'blue', 'black', 'pink']
+        let imgWrap = "";
+        let imgArray = [];
+        let urlBase64List = [];
+
+        const urlBase64ListProxiedArray = new Proxy(urlBase64List, {
+            get(target, prop) {
+                if (prop === 'last') {
+                    return target[target.length - 1];
+                }
+                return target[prop];
+            },
+            set(target, prop, value) {
+                if (prop === 'last') {
+                    target[target.length - 1] = value;
+                    return true;
+                }
+                target[prop] = value;
+                return true;
+            }
+        });
+
+        colors.forEach(color => {
+            $('.select-bg').append(`<button data-color="${color}" style="background: ${color};"></button>`)
+        })
+
+
+        $('.upload__inputfile').each(function () {
+            $(this).on('change', async function (e) {
+                imgWrap = $('.upload__img-wrap');
+                var maxLength = $(this).attr('data-max_length');
+
+                const files = e.target.files;
+                const filesArr = Array.prototype.slice.call(files);
+                let iterator = 0;
+
+                filesArr.forEach(function (f, index) {
+
+                    if (!f.type.match('image.*')) {
+                        return;
+                    }
+
+                    if (imgArray.length > maxLength) {
+                        return false
+                    } else {
+                        var len = 0;
+                        for (var i = 0; i < imgArray.length; i++) {
+                            if (imgArray[i] !== undefined) {
+                                len++;
+                            }
+                        }
+                        if (len > maxLength) {
+                            return false;
+                        } else {
+                            imgArray.push(f);
+
+                            var reader = new FileReader();
+
+                            reader.onload = function (e) {
+                                const base64Url = e.target.result;
+                                const index = $(".upload__img-close").length;
+                                const name = f.name;
+                                urlBase64ListProxiedArray.push({
+                                    name,
+                                    index,
+                                    url: base64Url,
+                                    url_dummy: urlDummyBase64
+                                });
+
+                                const html = `<div class='upload__img-box'>
+                                                <div data-number='${index}' data-file='${name}' class='img-bg drop-img-item'>
+                                                    <img src="${base64Url}" alt="">
+                                                    <div class='upload__img-close'></div>
+                                                </div>
+                                            </div>`;
+                                imgWrap.append(html);
+                                iterator++;
+                            }
+                            reader.readAsDataURL(f);
+                        }
+                    }
+                });
+            });
+        });
+
+        $body.on('click', ".upload__img-close", function (e) {
+            var file = $(this).parent().data("file");
+            for (var i = 0; i < imgArray.length; i++) {
+                if (imgArray[i].name === file) {
+                    urlBase64ListProxiedArray.splice(i, 1);
+                    break;
+                }
+            }
+            $(this).parent().parent().remove();
+        });
+
+        $body.on('click', "#btn-saveToZip", function (e) {
+            injectBgToCanvas(urlBase64ListProxiedArray, selectedColor)
+
+        })
+        $body.on('click', ".select-bg button", function (e) {
+            selectedColor = $(this).data('color');
+            $(".select-bg button").removeClass('active')
+            $('body').find('.drop-img-item').css('background', selectedColor)
+            $(this).addClass('active')
+        })
+
+
+        function base64ToCanvas(base64, color = '', callback) {
+            let img = new Image();
+            return new Promise((resolve, reject) => {
+                img.onload = function() {
+                    var canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+
+                    // Tạo một canvas mới
+                    const newCanvas = document.createElement('canvas');
+                    newCanvas.width = canvas.width;
+                    newCanvas.height = canvas.height;
+                    const newCtx = newCanvas.getContext('2d');
+
+                    // Vẽ hình chữ nhật đầy màu đỏ lên canvas mới
+                    newCtx.fillStyle = color;
+                    newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+
+                    // Vẽ hình ảnh cũ lên canvas mới
+                    newCtx.drawImage(canvas, 0, 0);
+                    console.log(newCtx)
+                    callback && callback(newCanvas);
+                    resolve(newCanvas)
+                };
+                img.src = base64;
+            })
+        }
+
+        function downloadCanvas (canvases) {
+            try {
+                const zip = new JSZip()
+
+                for (let i = 0; i < canvases.length; i++) {
+                    let canvas = canvases[i];
+
+                    // Convert the canvas to a data URL
+                    const dataURL = canvas.toDataURL();
+
+                    // Add the data URL to the zip file
+                    zip.file("canvas" + i + ".png", dataURL.substr(dataURL.indexOf(',') + 1), {base64: true});
+                }
+
+                // Generate the zip file and download it
+                zip.generateAsync({type:"blob"}).then(function(content) {
+                    saveAs(content, "canvas.zip");
+                });
+            } catch (error) {
+                alert(`Failed to download: ${error?.message}`)
+            }
+
+        }
+        async function injectBgToCanvas (arr, color = '') {
+            try {
+                const canvases = await Promise.all(arr.map(async img => await base64ToCanvas(img.url_dummy, color)))
+                downloadCanvas(canvases)
+            } catch(error){
+                console.log({error})
+            }
+        }
+    }
+
+</script>
+</html>
