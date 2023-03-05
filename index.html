@@ -19,14 +19,16 @@
         <button class="active" data-color="" style="background: url('./transparent.png')"></button>
     </div>
     <button id="btn-saveToZip">Lưu tất cả zip</button>
-    <div class="upload__img-wrap"></div>
-    <div class="upload__box">
-        <div class="upload__btn-box">
-            <label class="upload__btn">
-                <p>+</p>
-                <div class="inline-text-drop">Chọn (các) ảnh</div>
-                <input type="file" multiple="" data-max_length="20" class="upload__inputfile">
-            </label>
+    <div class="upload__img-wrap">
+
+        <div class="upload__box">
+            <div class="upload__btn-box">
+                <label class="upload__btn">
+                    <div>+</div>
+                    <div class="inline-text-drop">Chọn (các) ảnh</div>
+                    <input type="file" multiple="" data-max_length="20" class="upload__inputFile">
+                </label>
+            </div>
         </div>
     </div>
 </div>
@@ -36,7 +38,8 @@
         ImgUpload();
     });
     function ImgUpload() {
-        const $body = $('body')
+        const $body = $('body');
+        const $input = $('.upload__inputFile')
         let selectedColor = ''
         let colors = ['red', 'blue', 'black', 'pink']
         let imgWrap = "";
@@ -64,8 +67,29 @@
             $('.select-bg').append(`<button data-color="${color}" style="background: ${color};"></button>`)
         })
 
+        const $boxDrop = $('#s-drop-img');
 
-        $('.upload__inputfile').each(function () {
+        $boxDrop.on('dragover', function(e) {
+            e.preventDefault();
+            $boxDrop.addClass('drag-over');
+        });
+
+        $boxDrop.on('dragleave', function() {
+            $boxDrop.removeClass('drag-over');
+        });
+
+        $boxDrop.on('drop', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            $boxDrop.removeClass('drag-over');
+            const files = e.originalEvent.dataTransfer.files;
+            $input.prop('files', files)
+
+            const event = $.Event('change')
+            $input.trigger(event)
+        })
+
+        $input.each(function () {
             $(this).on('change', async function (e) {
                 imgWrap = $('.upload__img-wrap');
                 var maxLength = $(this).attr('data-max_length');
@@ -114,7 +138,7 @@
                                                     <div class='upload__img-close'></div>
                                                 </div>
                                             </div>`;
-                                imgWrap.append(html);
+                                imgWrap.prepend(html);
                                 iterator++;
                             }
                             reader.readAsDataURL(f);
@@ -139,6 +163,7 @@
             injectBgToCanvas(imgArray, selectedColor)
 
         })
+
         $body.on('click', ".select-bg button", function (e) {
             selectedColor = $(this).data('color');
             $(".select-bg button").removeClass('active')
