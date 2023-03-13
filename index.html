@@ -18,7 +18,7 @@
 <div id="s-drop-img">
     <div id="s-loading" style="display: none;">Đang xử lý...</div>
     <div class="select-bg">
-        <button class="active" data-color="" style="background: url('./transparent.png')"></button>
+        <button class="active bg-none" data-color=""><span></span></button>
     </div>
     <button id="btn-saveToZip">Lưu tất cả zip</button>
     <div class="upload__img-wrap">
@@ -35,23 +35,28 @@
 </div>
 </body>
 <script>
+    const CONFIG = {
+        colors: ['white', 'black'],
+        fileName: 'Image',
+        zipName: 'images.zip'
+    }
+
     jQuery(document).ready(function () {
         ImgUpload();
     });
     function ImgUpload() {
         const $body = $('body');
         const $input = $('.upload__inputFile')
+        const $boxDrop = $('#s-drop-img');
         let selectedColor = ''
-        let colors = ['red', 'blue', 'black', 'pink']
+        let colors = CONFIG.colors
         let imgWrap = "";
         let imgArray = [];
         let index = 0;
 
         colors.forEach(color => {
-            $('.select-bg').append(`<button data-color="${color}" style="background: ${color};"></button>`)
+            $('.select-bg').append(`<button data-color="${color}"><span style="background: ${color};"></span></button>`)
         })
-
-        const $boxDrop = $('#s-drop-img');
 
         $boxDrop.on('dragover', function(e) {
             e.preventDefault();
@@ -79,7 +84,6 @@
                     setLoading(true)
 
                     imgWrap = $('.upload__img-wrap');
-                    var maxLength = $(this).attr('data-max_length');
 
                     const files = e.target.files;
                     const filesArr = Array.prototype.slice.call(files);
@@ -103,15 +107,14 @@
                             file: file,
                             name,
                             index,
-                            url: file?.image_base64,
-                            url_dummy: urlDummyBase64
+                            url: file?.image_base64
                         });
                         const html = `<div class='upload__img-box'>
-                                                <div data-number='${index}' data-file='${name}' class='img-bg drop-img-item'>
-                                                    <img src="${file?.image_base64}" alt="">
-                                                    <div class='upload__img-close'></div>
-                                                </div>
-                                            </div>`;
+                                            <div data-number='${index}' data-file='${name}' class='img-bg drop-img-item'>
+                                                <img src="${file?.image_base64}" alt="">
+                                                <div class='upload__img-close'></div>
+                                            </div>
+                                        </div>`;
                         imgWrap.prepend(html);
                     })
 
@@ -123,8 +126,8 @@
         });
 
         $body.on('click', ".upload__img-close", function (e) {
-            var file = $(this).parent().data("file");
-            for (var i = 0; i < imgArray.length; i++) {
+            const file = $(this).parent().data("file");
+            for (let i = 0; i < imgArray.length; i++) {
                 if (imgArray[i].name === file) {
                     imgArray.splice(i, 1);
                     break;
@@ -135,25 +138,24 @@
 
         $body.on('click', "#btn-saveToZip", async function (e) {
             await injectBgToCanvas(imgArray, selectedColor)
-
         })
 
         $body.on('click', ".select-bg button", function (e) {
             selectedColor = $(this).data('color');
             $(".select-bg button").removeClass('active')
-            $('body').find('.drop-img-item').css('background', selectedColor)
+            $(':root').css('--bg-fill', selectedColor)
             $(this).addClass('active')
         })
 
 
-        function base64ToCanvas(base64, color = 'rgb(255 255 255 / 0%)', callback) {
+        function base64ToCanvas(base64, color, callback) {
             let img = new Image();
             return new Promise((resolve, reject) => {
                 img.onload = function() {
-                    var canvas = document.createElement('canvas');
+                    const canvas = document.createElement('canvas');
                     canvas.width = img.width;
                     canvas.height = img.height;
-                    var ctx = canvas.getContext('2d');
+                    const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0);
 
                     // create new canvas
@@ -163,11 +165,12 @@
                     const newCtx = newCanvas.getContext('2d');
 
                     // create box and fill color
+                    newCtx.fillStyle = color || 'rgb(255 255 255 / 0%)';
                     newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
-                    newCtx.fillStyle = color;
 
                     // generate new canvas
                     newCtx.drawImage(canvas, 0, 0);
+
                     callback && callback(newCanvas);
                     resolve(newCanvas)
                 };
@@ -186,12 +189,12 @@
                     const dataURL = canvas.toDataURL();
 
                     // Add the data URL to the zip file
-                    zip.file("image_" + i + ".png", dataURL.substr(dataURL.indexOf(',') + 1), {base64: true});
+                    zip.file(`${CONFIG.fileName}_${i}.png`, dataURL.substr(dataURL.indexOf(',') + 1), {base64: true});
                 }
 
                 // Generate the zip file and download it
                 zip.generateAsync({type:"blob"}).then(function(content) {
-                    saveAs(content, "canvas.zip");
+                    saveAs(content, CONFIG.zipName);
                 });
             } catch (error) {
                 alert(`Failed to download: ${error?.message}`)
@@ -201,7 +204,6 @@
         async function injectBgToCanvas (arr, color = '') {
             try {
                 const canvases = await Promise.all(arr.filter(item => !!item?.url).map(async img => await base64ToCanvas(img?.url, color)))
-                console.log(...canvases)
                 downloadCanvas(canvases)
             } catch(error){
                 console.log({error})
