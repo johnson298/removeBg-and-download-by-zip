@@ -14,19 +14,21 @@
     <script src="variable.js"></script>
 </head>
 <body>
-<div class="drop-img">
+<div id="s-drop-img">
+    <div id="s-loading" style="display: none;">Đang xử lý...</div>
     <div class="select-bg">
         <button class="active" data-color="" style="background: url('./transparent.png')"></button>
     </div>
     <button id="btn-saveToZip">Lưu tất cả zip</button>
-    <div class="upload__img-wrap"></div>
-    <div class="upload__box">
-        <div class="upload__btn-box">
-            <label class="upload__btn">
-                <p>+</p>
-                <div class="inline-text-drop">Chọn (các) ảnh</div>
-                <input type="file" multiple="" data-max_length="20" class="upload__inputfile">
-            </label>
+    <div class="upload__img-wrap">
+        <div class="upload__box">
+            <div class="upload__btn-box">
+                <label class="upload__btn">
+                    <div>+</div>
+                    <div class="inline-text-drop">Chọn (các) ảnh</div>
+                    <input type="file" multiple="" accept="image/png, image/jpg" data-max_length="20" class="upload__inputFile">
+                </label>
+            </div>
         </div>
     </div>
 </div>
@@ -74,7 +76,7 @@
         })
 
 
-        $('.upload__inputfile').each(function () {
+        $('.upload__inputFile').each(function () {
             $(this).on('change', async function (e) {
                 imgWrap = $('.upload__img-wrap');
                 var maxLength = $(this).attr('data-max_length');
@@ -82,6 +84,7 @@
                 const files = e.target.files;
                 const filesArr = Array.prototype.slice.call(files);
                 let iterator = 0;
+                console.log({filesArr, imgArray})
 
                 filesArr.forEach(function (f, index) {
 

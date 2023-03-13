@@ -45,24 +45,7 @@
         let colors = ['red', 'blue', 'black', 'pink']
         let imgWrap = "";
         let imgArray = [];
-        let urlBase64List = [];
-
-        /*const urlBase64ListProxiedArray = new Proxy(urlBase64List, {
-            get(target, prop) {
-                if (prop === 'last') {
-                    return target[target.length - 1];
-                }
-                return target[prop];
-            },
-            set(target, prop, value) {
-                if (prop === 'last') {
-                    target[target.length - 1] = value;
-                    return true;
-                }
-                target[prop] = value;
-                return true;
-            }
-        });*/
+        let index = 0;
 
         colors.forEach(color => {
             $('.select-bg').append(`<button data-color="${color}" style="background: ${color};"></button>`)
@@ -92,30 +75,30 @@
 
         $input.each(async function () {
             $(this).on('change', async function (e) {
-                setLoading(true)
+                try {
+                    setLoading(true)
 
-                imgWrap = $('.upload__img-wrap');
-                var maxLength = $(this).attr('data-max_length');
+                    imgWrap = $('.upload__img-wrap');
+                    var maxLength = $(this).attr('data-max_length');
 
-                const files = e.target.files;
-                const filesArr = Array.prototype.slice.call(files);
+                    const files = e.target.files;
+                    const filesArr = Array.prototype.slice.call(files);
 
-                const fileImages = filesArr.filter(file => file.type.match('image.*'))
+                    const fileImages = filesArr.filter(file => file.type.match('image.*'))
 
-                const res = await Promise.all(fileImages.map(async (file) => {
-                    const formData = new FormData()
-                    formData.append('file', file)
-                    const raw = await fetch('https://chuyenreview.net/removebg.php', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    return await raw.json()
-                }))
+                    const res = await Promise.all(fileImages.map(async (file) => {
+                        const formData = new FormData()
+                        formData.append('file', file)
+                        const raw = await fetch('https://chuyenreview.net/removebg.php', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        return await raw.json()
+                    }))
 
-                console.log(res)
-                res.forEach((file) => {
-                        const index = $(".upload__img-close").length;
-                        const name = file?.name;
+                    res.forEach((file) => {
+                        ++index;
+                        const name = new Date().getTime() + index;
                         imgArray.push({
                             file: file,
                             name,
@@ -123,7 +106,6 @@
                             url: file?.image_base64,
                             url_dummy: urlDummyBase64
                         });
-                    console.log('file?.image_base64', file)
                         const html = `<div class='upload__img-box'>
                                                 <div data-number='${index}' data-file='${name}' class='img-bg drop-img-item'>
                                                     <img src="${file?.image_base64}" alt="">
@@ -131,58 +113,12 @@
                                                 </div>
                                             </div>`;
                         imgWrap.prepend(html);
-                })
+                    })
 
-                let iterator = 0;
-
-                /*filesArr.forEach(function (f, index) {
-
-                    if (!f.type.match('image.*')) {
-                        return;
-                    }
-
-                    if (imgArray.length > maxLength) {
-                        return false
-                    } else {
-                        var len = 0;
-                        for (var i = 0; i < imgArray.length; i++) {
-                            if (imgArray[i] !== undefined) {
-                                len++;
-                            }
-                        }
-                        if (len > maxLength) {
-                            return false;
-                        } else {
-                            // imgArray.push(f);
-
-                            var reader = new FileReader();
-
-                            reader.onload = function (e) {
-                                const base64Url = e.target.result;
-                                const index = $(".upload__img-close").length;
-                                const name = f.name;
-                                imgArray.push({
-                                    file: f,
-                                    name,
-                                    index,
-                                    url: base64Url,
-                                    url_dummy: urlDummyBase64
-                                });
-
-                                const html = `<div class='upload__img-box'>
-                                                <div data-number='${index}' data-file='${name}' class='img-bg drop-img-item'>
-                                                    <img src="${base64Url}" alt="">
-                                                    <div class='upload__img-close'></div>
-                                                </div>
-                                            </div>`;
-                                imgWrap.prepend(html);
-                                iterator++;
-                            }
-                            reader.readAsDataURL(f);
-                        }
-                    }
-                });*/
-                setLoading(false)
+                    setLoading(false)
+                } catch {
+                    setLoading(false)
+                }
             });
         });
 
@@ -198,7 +134,7 @@
         });
 
         $body.on('click', "#btn-saveToZip", async function (e) {
-            injectBgToCanvas(imgArray, selectedColor)
+            await injectBgToCanvas(imgArray, selectedColor)
 
         })
 
@@ -210,7 +146,7 @@
         })
 
 
-        function base64ToCanvas(base64, color = '', callback) {
+        function base64ToCanvas(base64, color = 'rgb(255 255 255 / 0%)', callback) {
             let img = new Image();
             return new Promise((resolve, reject) => {
                 img.onload = function() {
@@ -227,8 +163,8 @@
                     const newCtx = newCanvas.getContext('2d');
 
                     // create box and fill color
-                    newCtx.fillStyle = color;
                     newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+                    newCtx.fillStyle = color;
 
                     // generate new canvas
                     newCtx.drawImage(canvas, 0, 0);
@@ -250,7 +186,7 @@
                     const dataURL = canvas.toDataURL();
 
                     // Add the data URL to the zip file
-                    zip.file("canvas" + i + ".png", dataURL.substr(dataURL.indexOf(',') + 1), {base64: true});
+                    zip.file("image_" + i + ".png", dataURL.substr(dataURL.indexOf(',') + 1), {base64: true});
                 }
 
                 // Generate the zip file and download it
@@ -265,6 +201,7 @@
         async function injectBgToCanvas (arr, color = '') {
             try {
                 const canvases = await Promise.all(arr.filter(item => !!item?.url).map(async img => await base64ToCanvas(img?.url, color)))
+                console.log(...canvases)
                 downloadCanvas(canvases)
             } catch(error){
                 console.log({error})
